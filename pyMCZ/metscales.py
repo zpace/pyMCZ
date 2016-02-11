@@ -47,7 +47,7 @@ N2S2_coef[:,6]=[-2910.63,1392.18,-249.012,19.7280,-0.583763]
 
 O3O2_coef=np.zeros((4,8))        # coefficients from model grid fits
 O3O2c0=[-36.9772,-74.2814,-36.7948,-81.1880,-52.6367,-86.8674,-24.4044,49.4728]
-O3O2_coef[:,0]=[-36.9772,10.2838,-0.957421,0.0328614] #z=0.05 
+O3O2_coef[:,0]=[-36.9772,10.2838,-0.957421,0.0328614] #z=0.05
 O3O2_coef[:,1]=[-74.2814,24.6206,-2.79194,0.110773]    # z=0.1
 O3O2_coef[:,2]=[-36.7948,10.0581,-0.914212,0.0300472]  # z=0.2
 O3O2_coef[:,3]=[-81.1880,27.5082,-3.19126,0.128252]    # z=0.5
@@ -56,7 +56,7 @@ O3O2_coef[:,5]=[-86.8674,28.0455,-3.01747,0.108311]    # z=1.5
 O3O2_coef[:,6]=[-24.4044,2.51913,0.452486,-0.0491711]  # z=2.0
 O3O2_coef[:,7]=[49.4728,-27.4711,4.50304,-0.232228]    # z=3.0
 '''
-     
+
 M08_coefs={'R23' : [  0.7462, -0.7149, -0.9401, -0.6154, -0.2524   ],
            'N2Ha': [ -0.7732,  1.2357, -0.2811, -0.7201, -0.3330],
            'O3Hb': [  0.1549, -1.5031, -0.9790, -0.0297],
@@ -64,7 +64,7 @@ M08_coefs={'R23' : [  0.7462, -0.7149, -0.9401, -0.6154, -0.2524   ],
            'O2Hb': [  0.5603,  0.0450, -1.8017, -1.8434, -0.6549],
            'O3N2': [  0.4520, -2.6096, -0.7170,  0.1347]}
 
-         
+
 #this is to check the Maiolino coefficients and find the split maximum of the cirves with degeneracy
 '''
 import pylab as pl
@@ -81,13 +81,13 @@ pl.xlabel("12+log(O/H)")
 pl.legend(loc=3)
 pl.show()
 '''
-       
+
 class diagnostics:
     def __init__(self,num, logf,nps):
         self.nm=num
         self.Ha=None
         self.Hb=None
- 
+
         self.hasHa,self.hasHb=False,False
         self.hasO2,self.hasO3=False,False
         self.hasS2,self.hasN2=False,False
@@ -153,7 +153,7 @@ class diagnostics:
 
 
         #metallicity diagnostics to be returned
-        
+
         self.mds={}
         for Z in  get_keys():
             self.mds[Z]=None
@@ -163,7 +163,7 @@ class diagnostics:
         self.nps=nps
 
     def printme(self, verbose=False):
-        try: 
+        try:
             print "\nHa", np.mean(self.Ha)
             if verbose: print self.Ha
         except (IndexError, TypeError): pass
@@ -174,43 +174,43 @@ class diagnostics:
         try:
             print  "\nO2",np.mean(self.O23727)
             if verbose: print self.O23727
-        except (IndexError, TypeError): pass 
+        except (IndexError, TypeError): pass
         try:
             print  "\nO3",np.mean(self.O35007)
             if verbose: print self.O35007
-        except (IndexError, TypeError): pass 
+        except (IndexError, TypeError): pass
         try:
             print  "\nO34959",np.mean(self.O34959)
             if verbose: print self.O34959
-        except (IndexError, TypeError): pass 
-        try:       
+        except (IndexError, TypeError): pass
+        try:
             print  "\nZ94",np.mean(self.mds['Z94'])
             if verbose: print self.mds['Z94']
-        except (IndexError, TypeError): pass 
-        try:       
+        except (IndexError, TypeError): pass
+        try:
             print  "\nR23",np.mean(self.R23)
             if verbose: print self.R23
-        except (IndexError, TypeError): pass 
-        try:       
+        except (IndexError, TypeError): pass
+        try:
             print "\nlog(R23)", np.mean(self.logR23)
             if verbose: print self.logR23
-        except (TypeError, IndexError): pass 
-        try:        
+        except (TypeError, IndexError): pass
+        try:
             print  "\nlog([NII][OII])",stats.nanmean(self.logN2O2)
             if verbose: print self.logN2O2
         except (TypeError, IndexError): pass
-        try:        
+        try:
             print  "\nlog([OIII][OII])",stats.nanmean(self.logO3O2)
-            if verbose: 
+            if verbose:
                 print self.logO3O2
         except (TypeError, IndexError): pass
         for k in self.mds.iterkeys():
             print "\n",k,
             try: print stats.nanmean(self.mds[k]), np.stdev(self.mds[k])
-            except (IndexError,TypeError): 
+            except (IndexError,TypeError):
                 if verbose: print self.mds[k]
-                
-    
+
+
     def checkminimumreq(self,red_corr,ignoredust):
         if red_corr and not ignoredust:
             if not self.hasHa :
@@ -226,7 +226,7 @@ class diagnostics:
         if not self.hasN2 and not (self.hasO2 and self.hasO3):
             return -1
 
-    def fz_roots(self,coef): 
+    def fz_roots(self,coef):
         if len(coef.shape)==1:
             coef[~(np.isfinite(coef))]=0.0
             rts= np.roots(coef[::-1])
@@ -255,7 +255,7 @@ class diagnostics:
         if DUSTCORRECT:
             if not flux:
                 return 0.4*self.mds['E(B-V)']*(l1-l2)
-            return 10**(0.4*self.mds['E(B-V)']*(l1-l2))        
+            return 10**(0.4*self.mds['E(B-V)']*(l1-l2))
         else:
             if not flux: return 0
             return 1.0
@@ -279,7 +279,7 @@ class diagnostics:
             self.O35007O2=(self.O35007/self.O23727)*self.dustcorrect(k_O3,k_O2,flux=True)
             self.O2O35007=(self.O23727/self.O35007)*self.dustcorrect(k_O2,k_O3,flux=True)
 
-            self.logO35007O2=np.log10( self.O35007O2) 
+            self.logO35007O2=np.log10( self.O35007O2)
             self.logO2O35007=np.log10( self.O2O35007)
 
             #self.logO2O35007Hb=np.log10((self.O23727+self.O35007)/self.Hb)
@@ -288,13 +288,13 @@ class diagnostics:
                 self.logO2O35007Hb=np.log10((self.O23727/self.Hb)* self.dustcorrect(k_O2,k_Hb,flux=True))+\
                 (self.O35007/self.Hb)*self.dustcorrect(k_O35007,k_Hb,flux=True)
 
-        else: 
+        else:
             printsafemulti( "WARNING: needs O lines and  and Ha/b: did you run setHab()?",self.logf,self.nps)
         if self.hasHb :
             if self.hasO2:
-                self.logO2Hb=np.log10(self.O23727/self.Hb)+self.dustcorrect(k_O2,k_Hb)#0.4*self.mds['E(B-V)']*(k_O2-k_Hb) 
+                self.logO2Hb=np.log10(self.O23727/self.Hb)+self.dustcorrect(k_O2,k_Hb)#0.4*self.mds['E(B-V)']*(k_O2-k_Hb)
             if self.hasO3:
-                self.logO3Hb=np.log10(self.O35007/self.Hb)+self.dustcorrect(k_O35007,k_Hb)#0.4*self.mds['E(B-V)']*(k_O2-k_Hb) 
+                self.logO3Hb=np.log10(self.O35007/self.Hb)+self.dustcorrect(k_O35007,k_Hb)#0.4*self.mds['E(B-V)']*(k_O2-k_Hb)
                 self.hasO3Hb=True
 
 
@@ -313,13 +313,13 @@ class diagnostics:
             self.N26584=N26584
             self.hasN2=True
             if self.hasHa :
-                self.logN2Ha=np.log10(self.N26584/self.Ha)#+self.dustcorrect(k_N2,k_Ha,flux=True) 
+                self.logN2Ha=np.log10(self.N26584/self.Ha)#+self.dustcorrect(k_N2,k_Ha,flux=True)
                 #lines are very close: no dust correction
                 #Note: no dust correction cause the lies are really close!
-            else: 
+            else:
                 printsafemulti( "WARNING: needs NII6584 and Ha to calculate NIIHa: did you run setHab()?",self.logf,self.nps)
             if self.hasS2 and self.hasS26731 and self.hasN2:
-                self.NII_SII=np.log10(self.N26584/(self.S26717+self.S26731))#+self.dustcorrect(k_N2,k_S2,flux=True) 
+                self.NII_SII=np.log10(self.N26584/(self.S26717+self.S26731))#+self.dustcorrect(k_N2,k_S2,flux=True)
                 #lines are very close: no dust correction
             if self.hasO2 and self.hasN2:
                 self.NII_OII=np.log10(self.N26584/self.O23727+self.dustcorrect(k_N2,k_O2,flux=True) )
@@ -330,8 +330,8 @@ class diagnostics:
             self.hasS2=True
 
             if self.hasHa:
-                self.logS2Ha=np.log10(self.S26717/self.Ha)+self.dustcorrect(k_S2,k_Ha)               
-            else: 
+                self.logS2Ha=np.log10(self.S26717/self.Ha)+self.dustcorrect(k_S2,k_Ha)
+            else:
                 printsafemulti( "WARNING: needs SII6717 and Ha to calculate SIIHa: did you run setHab() and setS()?",self.logf,self.nps)
         if S26731 is not None and sum(S26731>1e-9)>0:
             self.S26731=S26731
@@ -343,45 +343,45 @@ class diagnostics:
             self.S39532=S39532
             self.hasS39532=True
         if self.hasS2 :
-            
+
             if self.hasN2 and self.NII_SII is None and self.hasS26731:
-                self.NII_SII=np.log10(self.N26584/(self.S26717+self.S26731))#+self.dustcorrect(k_N2,k_O2,flux=True) 
-                #lines are very close: no dust correction            
+                self.NII_SII=np.log10(self.N26584/(self.S26717+self.S26731))#+self.dustcorrect(k_N2,k_O2,flux=True)
+                #lines are very close: no dust correction
             if self.hasO3  and self.OIII_SII is None and self.hasS26731:
                 self.OIII_SII=np.log10(self.O35007/(self.S26717+self.S26731)+self.dustcorrect(k_O3,k_S2,flux=True) )
 
 
     #@profile
     def calcEB_V(self):
-        printsafemulti( "calculating E(B-V)",self.logf,self.nps)
+        #printsafemulti( "calculating E(B-V)",self.logf,self.nps)
         self.mds['E(B-V)']=np.log10(2.86*self.Hb/self.Ha)/(0.4*(k_Ha-k_Hb)) # E(B-V)
         self.mds['E(B-V)'][self.mds['E(B-V)']<=0]=1e-5
-        
+
 
     #@profile
     def calcNIISII(self):
         if self.hasS2 and self.hasN2:
-            self.N2S2=self.N26584/self.S26717+self.dustcorrect(k_N2,k_S2,flux=True)#0.4*self.mds['E(B-V)']*(k_N2-k_S2) 
-            self.logN2S2=np.log10(self.N26584/self.S26717)+self.dustcorrect(k_N2,k_S2)#0.4*self.mds['E(B-V)']*(k_N2-k_S2) 
+            self.N2S2=self.N26584/self.S26717+self.dustcorrect(k_N2,k_S2,flux=True)#0.4*self.mds['E(B-V)']*(k_N2-k_S2)
+            self.logN2S2=np.log10(self.N26584/self.S26717)+self.dustcorrect(k_N2,k_S2)#0.4*self.mds['E(B-V)']*(k_N2-k_S2)
             self.hasN2S2=True
-        else: 
+        else:
             printsafemulti( "WARNING: needs SII6717 and NII6584 to calculate NIISII: did you run setN2() and setS?",self.logf,self.nps)
 
     #@profile
     def calcNIIOII(self):
         if self.hasN2 and self.hasO2:
-            self.logN2O2=np.log10(self.N26584/self.O23727)+self.dustcorrect(k_N2,k_O2) 
+            self.logN2O2=np.log10(self.N26584/self.O23727)+self.dustcorrect(k_N2,k_O2)
             self.hasN2O2=True
         if not self.hasN2O2 or np.mean(self.logN2O2) <1.2 :
 
-            try: 
-                printsafemulti( '''WARNING: the KD02 and KK04 (+M08) methods should only be used for  log([NII]6564/[OII]3727) >1.2, 
+            try:
+                printsafemulti( '''WARNING: the KD02 and KK04 (+M08) methods should only be used for  log([NII]6564/[OII]3727) >1.2,
                 the mean log([NII]6564/[OII]3727)= %f'''%np.mean(self.logN2O2),self.logf,self.nps)
-            except TypeError: 
-                printsafemulti( '''WARNING: the KD02 and KK04 (+M08) methods 
-                should only be used for  log([NII]6564/[OII]3727) >1.2, 
+            except TypeError:
+                printsafemulti( '''WARNING: the KD02 and KK04 (+M08) methods
+                should only be used for  log([NII]6564/[OII]3727) >1.2,
                 the mean log([NII]6564/[OII]3727)= %s'''%self.logN2O2,self.logf,self.nps)
- 
+
         if not self.hasN2O2:
             self.N2O2_roots=np.zeros(self.nm)+float('NaN')
         else:
@@ -389,33 +389,33 @@ class diagnostics:
             N2O2_coef[0]-=self.logN2O2
             N2O2_coef=N2O2_coef.T
             # finding roots for == (4)
-            self.N2O2_roots=np.array([self.fz_roots(N2O2_coef)])[0]          
+            self.N2O2_roots=np.array([self.fz_roots(N2O2_coef)])[0]
     #@profile
     def calcR23(self):
-        printsafemulti( "calculating R23",self.logf,self.nps)
+        #printsafemulti( "calculating R23",self.logf,self.nps)
 
         #R23 NEW Comb, [NII]/Ha: KK04 = Kobulnicky & Kewley, 2004, submitted'
         if  self.hasO3   and self.hasO2 and self.hasHb:
-            self.R2=(self.O23727/self.Hb)*self.dustcorrect(k_O2,k_Hb, flux=True) 
-            self.R3=(self.O34959p5007/self.Hb)*self.dustcorrect(k_O3,k_Hb, flux=True) 
+            self.R2=(self.O23727/self.Hb)*self.dustcorrect(k_O2,k_Hb, flux=True)
+            self.R3=(self.O34959p5007/self.Hb)*self.dustcorrect(k_O3,k_Hb, flux=True)
             self.R23=self.R2+self.R3
             self.logR23=np.log10(self.R23)
             self.mds['logR23']=self.logR23
-            #note that values of logR23 > 0.95 are unphysical. 
+            #note that values of logR23 > 0.95 are unphysical.
             #you may choose to uncomment the line below
             #self.logR23[self.logR23>0.95]=0.95
         else:
             printsafemulti( "WARNING: need O3, O2, Hb",self.logf,self.nps)
-            
+
     #@profile
     def calcS23(self):
-        printsafemulti(  "calculating S23",self.logf,self.nps)
-        #the original code here uses S267176731, 
+        #printsafemulti(  "calculating S23",self.logf,self.nps)
+        #the original code here uses S267176731,
         #which is however set to 6717 as default
         #Vilchez & Esteban (1996)
         if  self.hasS2 :
             if self.hasS39069 and self.hasHb:
-                self.logS23=np.log10((self.S26717/self.Hb)*self.dustcorrect(k_S2,k_Hb,flux=True) + (self.S39069/self.Hb)*self.dustcorrect(k_S3,k_Hb,flux=True))                                 
+                self.logS23=np.log10((self.S26717/self.Hb)*self.dustcorrect(k_S2,k_Hb,flux=True) + (self.S39069/self.Hb)*self.dustcorrect(k_S3,k_Hb,flux=True))
             #self.logS3S2=np.log10(S39069/self.S26717)+self.dustcorrect(k_S3,k_S2)
 
     ##@profile
@@ -426,21 +426,21 @@ class diagnostics:
         if self.logO3O2sq is None:
             self.logO3O2sq=self.logO3O2**2
         return (32.81 -1.153*self.logO3O2sq + Z*(-3.396 -0.025*self.logO3O2 + 0.1444*self.logO3O2sq))/(4.603-0.3119*self.logO3O2-\
-                0.163*self.logO3O2sq+ Z*(-0.48 + 0.0271*self.logO3O2+ 0.02037*self.logO3O2sq)) 
+                0.163*self.logO3O2sq+ Z*(-0.48 + 0.0271*self.logO3O2+ 0.02037*self.logO3O2sq))
 
-    ##@profile        
+    ##@profile
     def initialguess(self):
         # Initial Guess - appearing in LK code as of Nov 2006
-        # upper branch: if no lines are available, metallicity is set to 8.7        
-        self.Z_init_guess=np.zeros(self.nm)+8.7 
-        # use [N2]/Ha 
+        # upper branch: if no lines are available, metallicity is set to 8.7
+        self.Z_init_guess=np.zeros(self.nm)+8.7
+        # use [N2]/Ha
         if self.hasHa and self.hasN2:
             self.Z_init_guess[(self.logN2Ha < -1.3)&(self.N26584 != 0.0)]=8.2
             self.Z_init_guess[(self.logN2Ha < -1.1)&(self.logN2Ha >= -1.3)&(self.N26584 != 0.0)]=8.4
             #A1 KE08
             self.Z_init_guess[(self.logN2Ha >=-1.1)&(self.N26584 != 0.0)]=8.7
         #use [N2]/[O2]
-        if self.hasN2 and self.hasO2:            
+        if self.hasN2 and self.hasO2:
             N2O2=np.zeros(self.nm)+float('nan')
             if self.hasHb:
                 ###FED CHECK THIS!
@@ -448,16 +448,16 @@ class diagnostics:
             if not self.hasN2O2:
                 printsafemulti(  "WARNING: must calculate logN2O2 first",self.logf,self.nps)
                 self.calcNIIOII()
-            self.Z_init_guess[(self.logN2O2 < -1.2)&(N2O2 != 0.0)]=8.2  
+            self.Z_init_guess[(self.logN2O2 < -1.2)&(N2O2 != 0.0)]=8.2
             # at logN2O2<-1.2 using low-Z gals, A1 KE08
-            self.Z_init_guess[(self.logN2O2 >=-1.2)&(N2O2 != 0.0)]=8.7  
+            self.Z_init_guess[(self.logN2O2 >=-1.2)&(N2O2 != 0.0)]=8.7
             # at logN2O2>-1.2  using HII regions
 
 #######################these are the metallicity diagnostics##################
     #@profile
     def calcpyqz(self, plot=False, allD13=False):
-        printsafemulti(  "calculating D13",self.logf,self.nps)
-                
+        #printsafemulti(  "calculating D13",self.logf,self.nps)
+
         import pyqz
         self.NII_SII=None
         self.OIII_SII =None
@@ -502,13 +502,13 @@ class diagnostics:
 
     #@profile
     def calcDP00(self):
-        # Diaz, A. I., & Perez-Montero, E. 2000, MNRAS, 312, 130 
+        # Diaz, A. I., & Perez-Montero, E. 2000, MNRAS, 312, 130
         # As per KD02: DP00 diagnostic systematically underestimates the
-        # abundance relative to the comparison abundance. 
+        # abundance relative to the comparison abundance.
         # A term is added to improve the fit according to KD02 Eq. 6
         # AVAILABLE BUT DEPRECATED
-        printsafemulti(  "calculating DP00",self.logf,self.nps)
-        
+        #printsafemulti(  "calculating DP00",self.logf,self.nps)
+
         if self.logS23  is None:
             self.calcS23()
             if self.logS23 is None:
@@ -522,25 +522,25 @@ class diagnostics:
     def calcD02(self):
         # [NII]/Ha Denicolo, Terlevich & Terlevich (2002), MNRAS, 330, 69
         #FED:added uncertainties
-        printsafemulti(  "calculating D02",self.logf,self.nps)
-        
+        #printsafemulti(  "calculating D02",self.logf,self.nps)
+
         e1=np.random.normal(0,0.05,self.nm)
         e2=np.random.normal(0,0.1,self.nm)
         if self.hasN2 and self.hasHa:
             self.mds['D02'] = 9.12+e1+(0.73+e2)*self.logN2Ha
         else:
             printsafemulti(  "WARNING: need N2Ha to do this. did you run setHab and setNII",self.logf,self.nps)
-        
+
     #@profile
     def calcPP04(self):
-        ### PP04_N2_Z, PP04_O3N2_Z Pettini & Pagel diagnostics - 
+        ### PP04_N2_Z, PP04_O3N2_Z Pettini & Pagel diagnostics -
         ### Pettini & Pagel (2004), MNRAS, 348, L59
         # [NII]/Ha Pettini & Pagel (2004), MNRAS, 348, L59
-        #discriminating lower and upper branch using  [NII]/[OII] or  [NII]/Ha 
-        printsafemulti(  "calculating PP04",self.logf,self.nps)
+        #discriminating lower and upper branch using  [NII]/[OII] or  [NII]/Ha
+        #printsafemulti(  "calculating PP04",self.logf,self.nps)
         if self.hasN2 and self.hasHa:
             self.mds['PP04_N2Ha']= nppoly.polyval(self.logN2Ha,[9.37, 2.03, 1.26, 0.32])
-            
+
             #FED: restricting the range as per paper
             index=(self.logN2Ha>-2.5)*(self.logN2Ha<-0.3)
             self.mds['PP04_N2Ha'][~index]=float('NaN')
@@ -557,12 +557,12 @@ class diagnostics:
     #@profile
     def calcZ94(self):
         ### calculating z from Kobulnicky,Kennicutt,Pizagno (1998)
-        ### parameterization of Zaritzky et al. (1994) 
-        ###Z94 = Zaritsky, D., Kennicutt, R. C., & Huchra, J. P. 1994, 
+        ### parameterization of Zaritzky et al. (1994)
+        ###Z94 = Zaritsky, D., Kennicutt, R. C., & Huchra, J. P. 1994,
         ###ApJ, 420, 87
         ### only valid on the upper branch of R23 (KE08 A2.4)
 
-        printsafemulti(  "calculating Z94",self.logf,self.nps)
+        #printsafemulti(  "calculating Z94",self.logf,self.nps)
         if self.logR23 is None:
             printsafemulti(  "WARNING: Must first calculate R23",self.logf,self.nps)
             self.calcR23()
@@ -571,7 +571,7 @@ class diagnostics:
                 return -1
         self.mds['Z94']=nppoly.polyval(self.logR23, [9.265,-0.33,-0.202,-0.207,-0.333])
         self.mds['Z94'][(self.logR23 > 0.9)]=None
-        ## 0.9 is a conservative constraint to make sure that we are 
+        ## 0.9 is a conservative constraint to make sure that we are
         ## only using the upper branch (i.e. 12+log(O/H)>8.4)
 
 
@@ -587,25 +587,25 @@ class diagnostics:
             #R2=10**self.logO2Hb
             #P = R3/(R2+R3)
             self.P=self.R3/self.R23
-        
+
     #@profile
     def calcP05(self):
         # #### P-method #####
-        ##Pilyugin+ 2005 method.  Based on [OIII],[OII], Hbeta 
+        ##Pilyugin+ 2005 method.  Based on [OIII],[OII], Hbeta
         ##calibrated from Te method
         # make sure you run setOlines() first
-        printsafemulti(  "calculating P05",self.logf,self.nps)
-        
+        #printsafemulti(  "calculating P05",self.logf,self.nps)
+
         if self.calcP()==-1:
             return -1
         if self.Z_init_guess is None:
             self.initialguess()
 
         Psq=self.P*self.P
-        
+
         P_abund_up =(self.R23+726.1+842.2*self.P+337.5*Psq)/(85.96+82.76*self.P+43.98*Psq +1.793*self.R23)
         P_abund_low=(self.R23+106.4+106.8*self.P- 3.40*Psq)/(17.72+ 6.60*self.P+ 6.95*Psq -0.302*self.R23)
-        
+
         self.mds['P05']=P_abund_up
         self.mds['P05'][self.Z_init_guess <  8.4]=P_abund_low[self.Z_init_guess <  8.4]
 
@@ -614,14 +614,14 @@ class diagnostics:
     #@profile
     def calcP10(self):
         # #### P-method #####
-        ##Pilyugin+ 2010 method. 
+        ##Pilyugin+ 2010 method.
         ##calibrated from Te method
         # need Hb
         #The Astrophysical Journal, Volume 720, Issue 2, pp. 1738-1751 (2010).
         #Published in Sep 2010
 
-        printsafemulti(  "calculating P10",self.logf,self.nps)
-        
+        #printsafemulti(  "calculating P10",self.logf,self.nps)
+
         if not self.hasHb:
             printsafemulti(  "this method needs Hb",self.logf,self.nps)
             return -1
@@ -644,8 +644,8 @@ class diagnostics:
             P10logR3=np.log(self.R3)
 
         if self.hasN2:
-            #the ratio of N26548 and N26548 is N26584/N26548 = 3 
-            #independent on physical conditions 
+            #the ratio of N26548 and N26548 is N26584/N26548 = 3
+            #independent on physical conditions
             #The Physics and Dynamics of Planetary Nebulae
             # By Grigor A. Gurzadyan
             P10logN2=np.log((self.N26584*1.33)/self.Hb)+self.dustcorrect(k_N2,k_Hb)
@@ -666,9 +666,9 @@ class diagnostics:
         coefsON0=np.array([8.606,-0.105,-0.410,-0.150])
         coefsON1=np.array([8.642, 0.077, 0.411, 0.601])
         coefsON2=np.array([8.013, 0.905, 0.602, 0.751])
-        
+
         vsON=np.array([np.ones(self.nm),P10logR3,P10logR2,P10logN2R2]).T
-        
+
         indx=P10logN2 > -0.1
         if self.P is not None:
             self.mds['P10_ONS'][indx]= np.dot(vsONS[indx],coefsONS0)
@@ -688,13 +688,13 @@ class diagnostics:
         if self.P is not None:
             self.mds['P10_ONS'][indx]= float('NaN')
         self.mds['P10_ON'][indx] = float('NaN')
-        
+
     #@profile
     def calcP01(self):
         # P-method 2001 upper branch (derecated and commented out)
         # Pilyugin 2001
         # available but deprecated
-        printsafemulti(  "calculating old P05",self.logf,self.nps)
+        #printsafemulti(  "calculating old P05",self.logf,self.nps)
 
         if self.Z_init_guess is None:
             self.initialguess()
@@ -712,23 +712,23 @@ class diagnostics:
             self.mds['P01'][self.Z_init_guess >= 8.4]=P_abund_old[self.Z_init_guess >= 8.4]
         else:
             printsafemulti(  "WARNING: need OIIIOII to calculate P01, did you set them up with  setOlines()?",self.logf,self.nps)
-        
+
     #@profile
     def calcC01_ZR23(self):
         # C01 = Charlot, S., & Longhetti, M., 2001, MNRAS, 323, 887
-        # Charlot 01 R23 calibration: (case F) ##        
+        # Charlot 01 R23 calibration: (case F) ##
         # available but deprecated
-        printsafemulti(  "calculating C01",self.logf,self.nps)
+        #printsafemulti(  "calculating C01",self.logf,self.nps)
 
         if self.hasO3 and self.hasO2 and self.hasO3Hb:
             x2=self.O2O35007/1.5
             x3=(10**self.logO3Hb)*0.5
-            self.mds['C01_R23']=np.zeros(self.nm)+float('NaN')        
-            self.mds['C01_R23'][self.O2O35007<0.8]=np.log10(3.78e-4 * (x2[self.O2O35007<0.8])**0.17 * x3[self.O2O35007<0.8]**(-0.44))+12.0    
-         
-            self.mds['C01_R23'][ self.O2O35007 >= 0.8]=np.log10(3.96e-4 * x3[self.O2O35007 >= 0.8]**(-0.46))+12.0   
+            self.mds['C01_R23']=np.zeros(self.nm)+float('NaN')
+            self.mds['C01_R23'][self.O2O35007<0.8]=np.log10(3.78e-4 * (x2[self.O2O35007<0.8])**0.17 * x3[self.O2O35007<0.8]**(-0.44))+12.0
+
+            self.mds['C01_R23'][ self.O2O35007 >= 0.8]=np.log10(3.96e-4 * x3[self.O2O35007 >= 0.8]**(-0.46))+12.0
         else:
-            printsafemulti('''WARNING: need [OIII]5700, [OII]3727, and Ha to calculate calcC01_ZR23, 
+            printsafemulti('''WARNING: need [OIII]5700, [OII]3727, and Ha to calculate calcC01_ZR23,
 did you set them up with  setOlines()?'''        ,self.logf,self.nps)
 
         # Charlot 01 calibration: (case A) based on [N2]/[SII]##
@@ -739,29 +739,29 @@ did you set them up with  setOlines()?'''        ,self.logf,self.nps)
         if self.hasN2S2 and self.hasO3 and self.hasO2 and self.hasO3Hb:
             self.mds['C01_N2S2']=np.log10(5.09e-4*(x2**0.17)*((self.N2S2/0.85)**1.17))+12
         else:
-            printsafemulti('''WARNING: needs [NII]6584, [SII]6717, [OIII]5700, [OII]3727, and Ha to calculate calcC01_ZR23, 
-did you set them up with  setOlines() and ?''',self.logf,self.nps)        
+            printsafemulti('''WARNING: needs [NII]6584, [SII]6717, [OIII]5700, [OII]3727, and Ha to calculate calcC01_ZR23,
+did you set them up with  setOlines() and ?''',self.logf,self.nps)
 
 
     #@profile
     def calcM91(self):
         # ## calculating McGaugh (1991)
         # McGaugh, S.S., 1991, ApJ, 380, 140'
-        # M91 calibration using [N2O2] as 
+        # M91 calibration using [N2O2] as
         # initial estimate of abundance:
-        # this initial estimate can be 
-        # changed by replacing 
-        # OH_init by another guess, eg C01_Z 
-        # NOTE: occasionally the M91 
+        # this initial estimate can be
+        # changed by replacing
+        # OH_init by another guess, eg C01_Z
+        # NOTE: occasionally the M91
         # 'upper branch' will give a metallicity
-        # that is lower than the 'lower branch'.  
-        # Happens for very high R23 values.  
-        # If R23 is higher than the intersection 
+        # that is lower than the 'lower branch'.
+        # Happens for very high R23 values.
+        # If R23 is higher than the intersection
         # (calculate the intersection), then
-        # the metallicity is likely to be around 
+        # the metallicity is likely to be around
         # the R23 maximum = 8.4
-        
-        printsafemulti(  "calculating M91",self.logf,self.nps)
+
+        #printsafemulti(  "calculating M91",self.logf,self.nps)
         self.mds['M91']=np.zeros(self.nm)+float('NaN')
 
         if self.logR23 is None:
@@ -773,12 +773,12 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
 
         if self.Z_init_guess is None:
             self.initialguess()
-                
+
         M91_Z_low=nppoly.polyval(self.logR23,[12.0-4.944,0.767,0.602])-\
                    self.logO3O2*nppoly.polyval(self.logR23,[0.29,0.332,-0.331])
         M91_Z_up =nppoly.polyval(self.logR23,[12.0-2.939,-0.2,-0.237,-0.305,-0.0283])-\
                    self.logO3O2*nppoly.polyval(self.logR23,[0.0047,-0.0221,-0.102,-0.0817,-0.00717])
-        
+
         indx=(np.abs(self.logO3O2)>0) * (np.abs(self.logR23)>0) * (self.Z_init_guess < 8.4)
         self.mds['M91'][indx]=M91_Z_low[indx]
         indx=(np.abs(self.logO3O2)>0) * (np.abs(self.logR23)>0) * (self.Z_init_guess >= 8.4)
@@ -788,7 +788,7 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
     #@profile
     def calcM13(self):
         #Marino+ 2013
-        printsafemulti(  "calculating M13",self.logf,self.nps)
+        #printsafemulti(  "calculating M13",self.logf,self.nps)
 
         if not self.hasHa  or not self.hasN2:
             printsafemulti(  "WARNING: need O3, N2, Ha and Hb, or at least N2 and Ha",self.logf,self.nps)
@@ -809,7 +809,7 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
         #Maiolino+ 2008
         #Astronomy and Astrophysics, Volume 488, Issue 2, 2008, pp.463-479
         #Published in Sep 2008
-        printsafemulti(  "calculating M08",self.logf,self.nps)
+        #printsafemulti(  "calculating M08",self.logf,self.nps)
         highZ=None
         if self.logO35007O2 is not None:
             self.mds['M08_O3O2']=np.zeros(self.nm)+float('NaN')
@@ -817,14 +817,14 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
             coefs[0]=coefs[0]-self.logO35007O2
             sols=np.array([self.fz_roots(coefs.T)])[0]+8.69
             indx= ((sols.real>=7.1)*(sols.real<=9.4)*(sols.imag==0)).cumsum(1).cumsum(1)==1
-            #the two cumsum assure that if the condition for the ith element 
-            #of indx is [False, False] then after the first cumsum(1) is [0,0] 
+            #the two cumsum assure that if the condition for the ith element
+            #of indx is [False, False] then after the first cumsum(1) is [0,0]
             #[False, True] is [0,1]
             #[True, True] is [1,2]
-            #but (here is the kicker) [True, False] is [1,1]. 
-            #Because i want only one solution 
-            #(i'll settle for the first one occurring) [1,1] is ambiguous. 
-            #The second cumsum(1) makes 
+            #but (here is the kicker) [True, False] is [1,1].
+            #Because i want only one solution
+            #(i'll settle for the first one occurring) [1,1] is ambiguous.
+            #The second cumsum(1) makes
             #[0,0]->[0,0], [0,1]->[0,1], [1,2]->[1,3] and finally [1,1]->[1,2]
 
             self.mds['M08_O3O2'][(indx.sum(1))>0]=sols[indx].real
@@ -838,7 +838,7 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
             self.mds['M08_N2Ha'][(indx.sum(1))>0]=sols[indx].real
             if highZ is None:
                 highZ=np.median(self.logN2Ha)>-1.3
-            
+
         if self.logR23 is None:
             printsafemulti(  "WARNING: Must first calculate R23",self.logf,self.nps)
             self.calcR23()
@@ -848,16 +848,18 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
             self.mds['M08_R23']=np.zeros(self.nm)+float('NaN')
             coefs=np.array([M08_coefs['R23']]*self.nm).T
             coefs[0]=coefs[0]-self.logR23
-            sols=np.array([self.fz_roots(coefs.T)])[0]+8.69            
+            sols=np.array([self.fz_roots(coefs.T)])[0]+8.69
             if highZ is True:
                 indx= ((sols.real>=7.1)*(sols.real<=9.4)*(sols.imag==0)*(sols.real>=8.0)).cumsum(1).cumsum(1)==1
                 self.mds['M08_R23'][(indx.sum(1))>0]=sols[indx].real
             elif highZ is False:
                 indx= ((sols.real>=7.1)*(sols.real<=9.4)*(sols.imag==0)*(sols.real<=8.0)).cumsum(1).cumsum(1)==1
                 self.mds['M08_R23'][(indx.sum(1))>0]=sols[indx].real
-        if not allM08: 
+        if not allM08:
             return
-        else: printsafemulti("calculating other M08s",self.logf,self.nps)
+        else:
+            #printsafemulti("calculating other M08s",self.logf,self.nps)
+            pass
 
         if self.logO3Hb is not None:
 
@@ -897,20 +899,20 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
 
     #@profile
     def calcKD02_N2O2(self):
-        ##  Kewley & Dopita (2002) estimates of abundance 
+        ##  Kewley & Dopita (2002) estimates of abundance
         ##  KD02
-        # KD02 [N2]/[O2] estimate (can be used for whole log(O/H)+12 range, 
+        # KD02 [N2]/[O2] estimate (can be used for whole log(O/H)+12 range,
         # but rms scatter increases to 0.11 rms for log(O/H)+12 < 8.6
         # rms = 0.04 for
         # log(O/H)+12 > 8.6
         # uses equation (4) from KD02 paper
-        # FED: i vectorized the hell out of this function!!! 
+        # FED: i vectorized the hell out of this function!!!
         # from a 7 dimensional if/for loop to 1 if and 1 for :-D
         #vectorizing makes fed happy ...
 
-        printsafemulti(  "calculating KD02_N2O2",self.logf,self.nps)
+        #printsafemulti(  "calculating KD02_N2O2",self.logf,self.nps)
 
-        if self.hasN2 and self.hasO2 and self.hasHa and self.hasHb:         
+        if self.hasN2 and self.hasO2 and self.hasHa and self.hasHb:
             self.mds['KD02_N2O2']=np.zeros(self.nm)+float('NaN')
             if not self.hasN2O2:
                 printsafemulti(  "WARNING: must calculate logN2O2 first",self.logf,self.nps)
@@ -921,7 +923,7 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
             roots=self.N2O2_roots.T
             for k in range(4):
                 indx=(abs(roots[k]) >= 7.5) * (abs(roots[k]) <= 9.4) * (roots[k][:].imag ==  0.0 )
-                self.mds['KD02_N2O2'][indx]=abs(roots[k][indx]) 
+                self.mds['KD02_N2O2'][indx]=abs(roots[k][indx])
         else:
             printsafemulti(  "WARNING: need NII6584 and OII3727 and Ha and Hb to calculate this. did you run setO() setHab() and setNII()?",self.logf,self.nps)
         return 1
@@ -931,7 +933,7 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
     #@profile
     def calcKK04_N2Ha(self):
         # calculating [N2]/Ha abundance estimates using [O3]/[O2] also
-        printsafemulti(  "calculating KK04_N2Ha",self.logf,self.nps)
+        #printsafemulti(  "calculating KK04_N2Ha",self.logf,self.nps)
 
         if self.mds['KD02_N2O2']  is None:
             self.calcKD02_N2O2()
@@ -940,12 +942,12 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
             Z_new_N2Ha=np.zeros(self.nm)+8.6
         else:
             Z_new_N2Ha=self.mds['KD02_N2O2'].copy()  # was 8.6
-            
+
         if self.hasN2 and self.hasHa:
             logq_save=np.zeros(self.nm)
             convergence,tol,ii=100,1.0e-3,0
-            if self.hasO3O2 :        
-                # calculating logq using the [N2]/[O2] 
+            if self.hasO3O2 :
+                # calculating logq using the [N2]/[O2]
                 # metallicities for comparison
                 while convergence>tol and ii<100:
                     ii+=1
@@ -958,7 +960,7 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
                 if ii >=100:
                     printsafemulti(  "WARNING: loop did not converge" ,self.logf,self.nps)
                     Z_new_N2Ha=np.zeros(self.nm)+float('NaN')
-            else:     
+            else:
                 self.logq=7.37177*np.ones(self.nm)
                 Z_new_N2Ha=nppoly.polyval(self.logN2Ha,[7.04, 5.28,6.28,2.37])-\
                             self.logq*nppoly.polyval(self.logN2Ha,[-2.44,-2.01,-0.325,+0.128])+\
@@ -978,15 +980,15 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
         # calculating upper and lower metallicities for objects without
         # Hb  and for objects without O3 and/or O2
 
-        printsafemulti(  "calculating KK04_R23",self.logf,self.nps)
+        #printsafemulti(  "calculating KK04_R23",self.logf,self.nps)
 
-        #this is in the original code but not used :( 
+        #this is in the original code but not used :(
         #if self.hasN2 and self.hasHa:
         #logq_lims=[6.9,8.38]
         #logN2Ha=np.log10(self.N26584/self.Ha) CHECK!! why remove dust correction??
         #Z_new_N2Ha_lims= np.atleast_2d([1.0,1.0]).T*nppoly.polyval(self.logN2Ha,[7.04, 5.28,6.28,2.37])-
         #np.atleast_2d( logq_lims).T*nppoly.polyval(self.logN2Ha,[-2.44,-2.01,-0.325,0.128])+
-        #np.atleast_2d(logq_lims).T*(10**(self.logN2Ha-0.2)*(-3.16+4.65*self.logN2Ha)) 
+        #np.atleast_2d(logq_lims).T*(10**(self.logN2Ha-0.2)*(-3.16+4.65*self.logN2Ha))
         # R23 diagnostics from Kobulnicky & Kewley 2004
 
         Zmax=np.zeros(self.nm)
@@ -1011,7 +1013,7 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
                     ii+=1
                     logq=self.calclogq(Z_new)
                     Zmax[(logq >= 6.7) * (logq < 8.3)]=8.4
-                    # maximum of R23 curve:               
+                    # maximum of R23 curve:
                     Z_new=nppoly.polyval(self.logR23,[9.72, -0.777,-0.951,-0.072,-0.811])-\
                            logq*nppoly.polyval(self.logR23,[0.0737,  -0.0713, -0.141, 0.0373, -0.058])
                     indx=self.Z_init_guess<=Zmax
@@ -1028,7 +1030,7 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
                             logq*nppoly.polyval(self.logR23,[0.0737,  -0.0713, -0.141, 0.0373, -0.058])]
                 Z_new[(Z_new_lims[0]>Z_new_lims[1])]=None
                 self.mds['KK04_R23']=Z_new
-                
+
     #@profile
     def calcKDcombined(self):
         # KD02comb  Kewley, L. J., & Dopita, M. A., 2002, ApJ
@@ -1036,10 +1038,10 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
         # ### KD02 [NII]/[OII] estimate ###
         # (can be used for for log(O/H)+12 > 8.6 only)
 
-        printsafemulti(  "calculating KD_combined",self.logf,self.nps)
+        #printsafemulti(  "calculating KD_combined",self.logf,self.nps)
 
         #We first use the
-        #[N ii]/[O ii] ratio to determine whether it lies on the upper 
+        #[N ii]/[O ii] ratio to determine whether it lies on the upper
         #or lower R23 branch
 
         if self.mds['KD02_N2O2']  is None:
@@ -1062,14 +1064,14 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
 
         #alternative way to calculate KD02_N2O2, stated in the paper KD02,
         #valid in high Z regimes (Z>8.4)
-        #but we forego it 
+        #but we forego it
         #if not self.logN2O2 is None:
         #    self.mds['KD02_N2O2']=np.log10(8.511e-4*(1.54020+1.26602*self.logN2O2+0.167977*self.logN2O2**2))+12.
         #else: self.mds['KD02_N2O2']=np.zeros(self.nm)+float('NaN')
 
-        # ionization parameter        
-        # calculate an initial ionization parameter by assuming 
-        # a nominal lower branch [12 + log (O/H ) = 8.2] 
+        # ionization parameter
+        # calculate an initial ionization parameter by assuming
+        # a nominal lower branch [12 + log (O/H ) = 8.2]
         # or upper branch [12 + log (O/H ) = 8.7] metallicity using
         # equation (13) from KK04
         logq=np.zeros(self.nm)
@@ -1086,15 +1088,15 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
         # if log([NII]/[OII]) after extinction correction is <-1.5, then check the data.
         # if it is only slightly less than 1.5, then this can be a result of either noisy
         # data, inaccurate fluxes or extinction correction, or a higher ionization parameter
-        # than modelled.  
+        # than modelled.
         # For these cases, the average of the M91,Z94 and C01 should be used.
-        
+
         # KD02 R23 estimate (not reliable for  8.4 < log(O/H)+12 < 8.8)
         # uses [NII]/[OII] estimate as initial guess - this can be changed below
-        
+
         self.mds['KD02comb']=np.zeros(self.nm)+float('NaN')
 
-        
+
         indx_ig=self.Z_init_guess > 8.4
         if self.mds['KD02_N2O2'] is not None:
             self.mds['KD02comb'][indx_ig]=self.mds['KD02_N2O2'][indx_ig].copy()
@@ -1102,10 +1104,10 @@ did you set them up with  setOlines() and ?''',self.logf,self.nps)
             self.mds['KD02comb'][~indx_ig]=self.mds['KK04_N2Ha'][~indx_ig].copy()
         if self.mds['KK04_R23'] is not None and self.mds['M91'] is not None:
             # if [NII]/[OII] abundance available
-            # and [NII]/Ha abundance < 8.4, then use R23. 
+            # and [NII]/Ha abundance < 8.4, then use R23.
             indx=(~np.isnan(self.mds['KK04_R23'])) * (~np.isnan(self.mds['M91']) ) * (~indx_ig)
             self.mds['KD02comb'][indx]=0.5*(self.mds['KK04_R23'][indx].copy()+self.mds['M91'][indx].copy())
-            
+
         else:
             printsafemulti(  "WARNING:  cannot calculate KK04comb because  KK04_R23 or M91, failed"  ,self.logf,self.nps)
 

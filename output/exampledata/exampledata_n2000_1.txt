@@ -1,0 +1,4 @@
+exampledata	 Median Oxygen abundance (12+log(O/H))	 16th percentile	 84th percentile
+E(B-V)	 0.119000	 0.018000	 0.018000
+logR23	 0.428000	 0.004000	 0.004000
+D02	 8.601000	 0.082000	 0.088000

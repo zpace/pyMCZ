@@ -14,15 +14,21 @@ import pylabsetup
 
 #import metallicity_save2 as metallicity
 import metallicity as metallicity
+reload(metallicity)
+import metscales as ms
 
 import itertools
 import multiprocessing as mpc
-NM0=0# setting this to say N>0 starts the calculation at measurement N. 
-#this is only for exploratory purposes as the code bugs out before 
+NM0=0# setting this to say N>0 starts the calculation at measurement N.
+#this is only for exploratory purposes as the code bugs out before
 #plotting and printing the results
 
 PROFILING = True
 PROFILING = False
+
+from astropy import table as t, constants as c, units as u, wcs
+from astropy.visualization import hist
+import corner
 
 
 alllines=['[OII]3727','Hb','[OIII]4959','[OIII]5007','[OI]6300','Ha','[NII]6584','[SII]6717','[SII]6731','[SIII]9069','[SIII]9532']
@@ -34,7 +40,7 @@ MAXPROCESSES=10
 NOPICKLE=False
 try:
     import pickle
-except ImportError: 
+except ImportError:
     NOPICKLE=True
 
 
@@ -58,7 +64,7 @@ def is_number(s):
         except ValueError:
             return False
     return False
-        
+
 def smart_open(logfile=None):
     if logfile and logfile != '-':
         fh = open(logfile, 'w')
@@ -119,44 +125,44 @@ def readfile(filename):
     if 'flag' in header:
         findex=header.index('flag')
         formats[findex]='S10'
-    
+
     bstruct={}
     for i,k in enumerate(header):
         bstruct[k]=[i,0]
     b = np.loadtxt(filename,skiprows=noheader, dtype={'names':header,'formats':formats}, comments=';')
     if b.size == 1:
         b=np.atleast_1d(b)
-    
+
     for i,k in enumerate(header):
         if not k=='flag' and is_number(b[k][0]):
             bstruct[k][1]=np.count_nonzero(b[k])+sum(np.isnan(b[k]))
     j=len(b['galnum'])
-    return b,j,bstruct
+    return b, j, bstruct
 
 def ingest_data(filename,path):
     ###Initialize###
-    measfile=os.path.join(path,filename+"_meas.txt")
-    errfile =os.path.join(path,filename+"_err.txt")
-    
-    ###read the max, meas, min flux files###    
-    meas,nm, bsmeas=readfile(measfile)
-    err, nm, bserr =readfile(errfile)
+    measfile = os.path.join(path, filename + "_meas.txt")
+    errfile  = os.path.join(path, filename + "_err.txt")
+
+    ###read the max, meas, min flux files###
+    meas, nm, bsmeas = readfile(measfile)
+    err,  nm, bserr  = readfile(errfile)
     try:
         snr=(meas[:,1:].view(np.float32).reshape(meas[:,1:].shape + (-1,))[:,1:])/(err[:,1:].view(np.float32).reshape(err[:,1:].shape + (-1,))[:,1:])
-        if snr[~np.isnan(snr)].any()<3:  
-            raw_input('''WARNING: signal to noise ratio smaller than 3 
-            for at least some lines! You should only use SNR>3 
+        if snr[~np.isnan(snr)].any()<3:
+            raw_input('''WARNING: signal to noise ratio smaller than 3
+            for at least some lines! You should only use SNR>3
             measurements (return to proceed)''')
     except (IndexError, TypeError):
         pass
     return (filename, meas, err, nm, path, (bsmeas,bserr))
 
 def input_data(filename,path):
-    p = os.path.join(path,"input") 
+    p = os.path.join(path,"input")
     assert os.path.isdir(p), "bad data directory %s"%p
     if os.path.isfile(os.path.join(p,filename+'_err.txt')):
         if os.path.isfile(os.path.join(p,filename+'_meas.txt')):
-            return ingest_data(filename,path=p)            
+            return ingest_data(filename,path=p)
     print "Unable to find _meas and _err files ",filename+'_meas.txt',filename+'_err.txt',"in directory ",p
     return -1
 
@@ -165,7 +171,7 @@ def input_data(filename,path):
 ##############################################################################
 ##returns appropriate bin size for the number of data
 ##mode 'k' calculates this based on Knuth's rule
-##mode 'd' calculates this based on Doane's formula 
+##mode 'd' calculates this based on Doane's formula
 ##mode 's' calculates this based on sqrt of number of data
 ##mode 't' calculates this based on 2*n**1/3 (default)
 ##############################################################################
@@ -189,7 +195,7 @@ def getbinsize(n,data,):
 ##############################################################################
 def checkhist(snname,Zs,nsample,i,path):
     global CLOBBER
-    
+
     name='%s_n%d_%s_%d'%((snname,nsample,Zs,i+1))
     outdir=os.path.join(path,'hist')
     outfile=os.path.join(outdir,name+".pdf")
@@ -209,10 +215,10 @@ def savehist(data,snname,Zs,nsample,i,path,nmeas,measnames, verbose=False, fs=24
     name='%s_n%d_%s_%d'%((snname,nsample,Zs,i+1))
     outdir=os.path.join(path,'hist')
     outfile=os.path.join(outdir,name+".pdf")
-    if not NOPLOT: 
+    if not NOPLOT:
         fig=plt.figure(figsize=(11,8))
         plt.clf()
-        
+
     ####kill outliers, infinities, and bad distributions###
     data=data[np.isfinite(data)]
 
@@ -239,7 +245,7 @@ def savehist(data,snname,Zs,nsample,i,path,nmeas,measnames, verbose=False, fs=24
             maxright=median+1
         if round(right,6)==round(left,6) and round(left,6)==round(median,6):
             print '{0:15} {1:20} {2:>13.3f}   -{3:>7.3f}   +{4:>7.3f} (no distribution)'.format(snname,Zs,median,0,0 )
-  
+
             return "%f\t %f\t %f"%(round(median,3), round(median-left,3), round(right-median,3)), data,kde#"-1,-1,-1",[]
         ###print out the confidence interval###
         print '{0:15} {1:20} {2:>13.3f}   -{3:>7.3f}   +{4:>7.3f}'.format(snname, Zs, round(median,3), round(median-left,3), round(right-median,3))
@@ -251,20 +257,20 @@ def savehist(data,snname,Zs,nsample,i,path,nmeas,measnames, verbose=False, fs=24
             try:
                 from sklearn.neighbors import KernelDensity
             except ImportError:
-                print '''sklearn is not available, 
-                thus we cannot compute kernel density. 
+                print '''sklearn is not available,
+                thus we cannot compute kernel density.
                 switching to bayesian blocks'''
                 BINMODE='bb'
         if BINMODE=='kd':
             ##bw is chosen according to Silverman 1986
             bw=1.06*std*n**(-0.2)
-            numbin,bm=getbinsize(data.shape[0],data)        
-            distrib=np.histogram(data, bins=int(numbin), density=True)            
+            numbin,bm=getbinsize(data.shape[0],data)
+            distrib=np.histogram(data, bins=int(numbin), density=True)
             ###make hist###
             counts, bins=distrib[0],distrib[1]
             widths=np.diff(bins)
             countsnorm=counts/np.max(counts)
-            
+
             if bw >0:
                 kde = KernelDensity(kernel='gaussian', bandwidth=bw).fit(data[:, np.newaxis])
                 kdebins=np.linspace(maxleft,maxright,1000)[:, np.newaxis]
@@ -287,12 +293,12 @@ def savehist(data,snname,Zs,nsample,i,path,nmeas,measnames, verbose=False, fs=24
                 except ImportError:
                     print "bayesian blocks for histogram requires astroML to be installed"
                     print "defaulting to Knuth's rule "
-                    ##otherwise 
-                    numbin,bm=getbinsize(data.shape[0],data)        
+                    ##otherwise
+                    numbin,bm=getbinsize(data.shape[0],data)
                     distrib=np.histogram(data, bins = int(numbin), density=True)
             else:
-                numbin,bm=getbinsize(data.shape[0],data)        
-                distrib=np.histogram(data, numbin, density=True)            
+                numbin,bm=getbinsize(data.shape[0],data)
+                distrib=np.histogram(data, numbin, density=True)
 
             ###make hist###
             counts, bins=distrib[0],distrib[1]
@@ -301,13 +307,13 @@ def savehist(data,snname,Zs,nsample,i,path,nmeas,measnames, verbose=False, fs=24
 
         ###plot hist###
         if NOPLOT: return "%f\t %f\t %f"%(round(median,3), round(median-left,3), round(right-median,3)), data,kde
-       
+
         plt.bar(bins[:-1],countsnorm,widths,color=['gray'], alpha=alpha)
         plt.minorticks_on()
         plt.gca().xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         plt.xlim(maxleft,maxright)
 
-        #the following lines assure the x tick label is 
+        #the following lines assure the x tick label is
         #within the length of the x axis
         xticks=plt.xticks()[0]
         dx=xticks[-1]-xticks[-2]
@@ -316,13 +322,13 @@ def savehist(data,snname,Zs,nsample,i,path,nmeas,measnames, verbose=False, fs=24
             maxright=maxright+0.25*dx
             maxleft =maxleft -0.25*dx
         plt.xlim(maxleft,maxright)
-        plt.xticks(xticks, ['%.2f'%s for s in xticks])           
+        plt.xticks(xticks, ['%.2f'%s for s in xticks])
 
         plt.ylim(0,1.15)
-        plt.yticks(np.arange(0.2,1.3,0.2 ), [ "%.1f"%x for x in np.arange(0.2,1.1,0.2)])  
+        plt.yticks(np.arange(0.2,1.3,0.2 ), [ "%.1f"%x for x in np.arange(0.2,1.1,0.2)])
         plt.axvspan(left,right,color='DarkOrange',alpha=0.4)
         plt.axvline(x=median,linewidth=2,color='white',ls='--')
-        
+
         #labels and legends
         st='%s '%(snname)
         plt.annotate(st, xy=(0.13, 0.6), xycoords='axes fraction',size=fs,fontweight='bold')
@@ -332,7 +338,7 @@ def savehist(data,snname,Zs,nsample,i,path,nmeas,measnames, verbose=False, fs=24
         plt.annotate(st, xy=(0.61, 0.65), xycoords='axes fraction',fontsize=fs)
         effectiven=len(data[~np.isnan(data)])
         if effectiven:
-            st='MC sample size %d (%d)\nhistogram rule: %s'%(effectiven,nsample,binning[BINMODE])   
+            st='MC sample size %d (%d)\nhistogram rule: %s'%(effectiven,nsample,binning[BINMODE])
         if bm:
             if effectiven<nsample:
                 st='MC sample size %d (%d)\nhistogram rule: %s'%(effectiven,nsample,binning[bm])
@@ -350,9 +356,9 @@ def savehist(data,snname,Zs,nsample,i,path,nmeas,measnames, verbose=False, fs=24
         plt.savefig(outfile,format='pdf')
         plt.close(fig)
 
-        
+
         return "%f\t %f\t %f"%(round(median,3), round(median-left,3), round(right-median,3)), data,kde
-        
+
     except (OverflowError,AttributeError,ValueError):
         if VERBOSE: print data
         print name, 'had infinities (or something in plotting went wrong)'
@@ -371,7 +377,7 @@ def calc((i,(sample,flux,err,nm,bss,mds,disp, dust_corr,verbose,res,scales,nps, 
     success=metallicity.calculation(scales[i],fluxi,nm,mds,nps,logf,disp=disp, dust_corr=dust_corr,verbose=verbose)
     if success==-1:
         print >>logf, "MINIMUM REQUIRED LINES: '[OII]3727','[OIII]5007','[NII]6584','[SII]6717'"
-        
+
     for key in scales[i].mds.iterkeys():
         res[key][i]=scales[i].mds[key]
         if res[key][i] is None:
@@ -379,7 +385,7 @@ def calc((i,(sample,flux,err,nm,bss,mds,disp, dust_corr,verbose,res,scales,nps, 
     return res
 
 ##############################################################################
-##  The main function. takes the flux and its error as input. 
+##  The main function. takes the flux and its error as input.
 ##  filename - a string 'filename' common to the three flux files
 ##  flux - np array of the fluxes
 ##  err - the flux errors, must be the same dimension as flux
@@ -393,19 +399,20 @@ def calc((i,(sample,flux,err,nm,bss,mds,disp, dust_corr,verbose,res,scales,nps, 
 #@profile
 def run((name, flux, err, nm, path, bss), nsample, mds, multiproc, logf, unpickle=False, dust_corr=True,verbose=False, fs=24):
     global RUNSIM#,BINMODE#,NOPLOT
-    assert(len(flux[0])== len(err[0])), "flux and err must be same dimensions" 
-    assert(len(flux['galnum'])== nm), "flux and err must be of declaired size" 
-    assert(len(err['galnum'])== nm), "flux and err must be same dimensions" 
+    assert(len(flux[0])== len(err[0])), "flux and err must be same dimensions"
+    assert(len(flux['galnum'])== nm), "flux and err must be of declaired size"
+    assert(len(err['galnum'])== nm), "flux and err must be same dimensions"
 
 
     #increasing sample by 10% to assure robustness against rejected samples
     newnsample=nsample
     if nsample>1: newnsample=int(nsample+0.1*nsample)
-    
+
     p=os.path.join(path,'..')
 
     ###retrieve the metallicity keys
     Zs= metallicity.get_keys()
+    print Zs
 
     ###make necessary paths for output files
     if not os.path.exists(os.path.join(p,'output','%s'%name)):
@@ -435,18 +442,18 @@ def run((name, flux, err, nm, path, bss), nsample, mds, multiproc, logf, unpickl
         if nsample==1 : sample=[np.array([mu]) for i in range(NM0,nm)]
 
         else: sample=[np.random.normal(mu,sigma,newnsample) for i in range(NM0,nm)]
-        
+
         ###Start calculation###
         ## the flux to be feed to the calculation will be
         ## flux + error*i
-        ## where i is the sampled gaussian    
+        ## where i is the sampled gaussian
         if VERBOSE: print "Starting iteration"
-        
+
         #initialize the dictionary
         res={}
         for key in Zs:
             res[key]=[[] for i in range(NM0,nm)]
-            
+
         #use only valid inputs
         delkeys=[]
         for k in bss[0].iterkeys():
@@ -455,14 +462,15 @@ def run((name, flux, err, nm, path, bss), nsample, mds, multiproc, logf, unpickl
         for k in delkeys:
             del bss[0][k]
             del bss[1][k]
-        
+
 
         import metscales as ms
         nps = min (mpc.cpu_count()-1 or 1, MAXPROCESSES)
 
         if multiproc and nps>1:
+            print 'using multiproc!'
             scales=[ms.diagnostics(newnsample, logf,nps) for i in range(nm)]
-            
+
             print >>logf, "\n\n\nrunning on %d threads\n\n\n"%nps
             second_args=[sample,flux,err,nm,bss,mds,VERBOSE, dust_corr,VERBOSE,res,scales,nps, logf]
             pool = mpc.Pool(processes=nps) # depends on available cores
@@ -477,7 +485,7 @@ def run((name, flux, err, nm, path, bss), nsample, mds, multiproc, logf, unpickl
             for key in scales[i].mds.iterkeys():
                 res[key]=np.array(res[key]).T
             if VERBOSE: print "Iteration Complete"
-        else: 
+        else:
             #looping over nm spectra
             for i in range(NM0,nm):
                 scales=ms.diagnostics(newnsample, logf,nps)
@@ -496,29 +504,28 @@ def run((name, flux, err, nm, path, bss), nsample, mds, multiproc, logf, unpickl
                     print "MINIMUM REQUIRED LINES:  [OII]3727 & [OIII]5007, or [NII]6584, and Ha & Hb if you want dereddening"
                     #continue
 
-                
                 for key in scales.mds.iterkeys():
                     res[key][i]=scales.mds[key]
                     if res[key][i] is None:
                         res[key][i]=[float('NaN')]*newnsample
                     elif len(res[key][i])<newnsample:
                         res[key][i]=res[key][i]+[float('NaN')]*(newnsample-len(res[key][i]))
-                
+
             for key in scales.mds.iterkeys():
                 res[key]=np.array(res[key]).T
             if VERBOSE: print "Iteration Complete"
-    
+
         #"WE CAN PICKLE THIS!"
         #pickle this realization
         if not NOPICKLE:
             pickle.dump(res,open(picklefile,'wb'))
-            
+
     from matplotlib.font_manager import findfont, FontProperties
-    
+
     if 'Time' not in  findfont(FontProperties()):
         fs=20
     if VERBOSE: print "FONT: %s, %d"%(findfont(FontProperties()),fs)
-    
+
 
     ###Bin the results and save###
     print "\n\n"
@@ -527,7 +534,7 @@ def run((name, flux, err, nm, path, bss), nsample, mds, multiproc, logf, unpickl
         if ASCIIOUTPUT:
             fi=open(os.path.join(binp,'%s_n%d_%d.txt'%(name,nsample,i+1)),'w')
             fi.write("%s\t Median Oxygen abundance (12+log(O/H))\t 16th percentile\t 84th percentile\n"%name)
-        
+
         boxlabels=[]
         datas=[]
         print "\n\nmeasurement %d : %s-------------------------------------------------------------"%(i+1,flux[i]['galnum'])
@@ -544,7 +551,7 @@ def run((name, flux, err, nm, path, bss), nsample, mds, multiproc, logf, unpickl
                             with open(os.path.join(binp,'%s_n%d_%s_%d.csv'%(name,nsample,key,i+1)), "wb") as fidist:
                                 writer = csv.writer(fidist)
                                 writer.writerow(res[key][:,i])
-                        print 
+                        print
                         sh,data,kde=savehist(res[key][:,i],name,key,nsample,i,binp,nm,flux[:]['galnum'],verbose=verbose, fs=fs)
                         s=key+"\t "+sh+'\n'
                         if ASCIIOUTPUT:
@@ -589,15 +596,198 @@ def run((name, flux, err, nm, path, bss), nsample, mds, multiproc, logf, unpickl
         if VERBOSE: print "uncertainty calculation complete"
         #del datas
 
+def get_key_md(md):
+    key_md = {'D02': ['D02'], 'Z94': ['Z94'], 'M91': ['M91'], 'PP04': ['PP04'],
+        'P10': ['P10'], 'M08': ['M08'], 'M13': ['M13'],
+        'KD02': ['KD02_N2O2', 'KD_combined'],
+        'KK04': ['KK04_N2Ha', 'KK04_R23']}
+
+    return key_md[md]
+
+class MCZ(object):
+    def __init__(self, name, flux, err, **kwargs):
+        '''
+        flux and err should both be astropy tables
+        '''
+
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
+        if not hasattr(self, 'NM0'):
+            setattr(self, 'NM0', 0)
+        if not hasattr(self, 'nps'):
+            setattr(self, 'nps', None)
+        if not hasattr(self, 'dust_corr'):
+            setattr(self, 'dust_corr', True)
+        if not hasattr(self, 'unpickle'):
+            setattr(self, 'unpickle', False)
+        if not hasattr(self, 'multiproc'):
+            setattr(self, 'multiproc', False)
+        if not hasattr(self, 'logf'):
+            setattr(self, 'logf', 'logf.log')
+        if not hasattr(self, 'verbose'):
+            setattr(self, 'verbose', False)
+
+        if self.unpickle == True:
+            raise NotImplementedError('unpickling not yet supported')
+
+        if self.multiproc == True:
+            raise NotImplementedError('multi-processing not yet supported')
+
+        self.nm = len(flux)
+
+        self.flux = flux
+        self.err = err
+        self.name = name
+
+    def estimate(self):
+        # estimate metallicity using the emission-lines stated
+        # in <obj>_meas.txt file
+
+        return self.sample(1, True)
+
+    def sample(self, nsample=1000, from_estimate=False):
+
+        if (nsample == 1) and (from_estimate == False):
+            raise ValueError(
+                'for nsample = 1, use .estimate() method!')
+        elif 1 < nsample < 100:
+            raise ValueError(
+                'need at least 100 samples!')
+
+        # increasing sample by 10% to ensure
+        # robustness against rejected samples
+        nsample=int(nsample)
+
+        # set up a dictionary to store tables of relevant data for each spaxel
+        res_d = {}
+
+        tfcnames = [k for k in self.flux.colnames
+            if len(self.flux[k]) > np.isnan(self.flux[k]).sum()]
+        self.tfcnames = tfcnames
+
+        #looping over nm measurements
+        for i in range(self.NM0, 3):#self.nm):
+            galnum = self.flux['galnum'][i]
+            fr = self.flux[i]
+            er = self.err[i]
+
+            fluxi = {k: np.random.normal(fr[k], er[k], nsample)
+                    for k in fr.colnames
+                    if ((k != 'galnum') and (~np.isnan(fr[k])))}
+
+            # set up a table for a given galnum
+            res_d[galnum] = t.Table()
+            # add a column for flux information
+            for n in tfcnames:
+                if (n != 'galnum'):
+                    if (np.isnan(self.flux[n]).sum() != len(self.flux[n])):
+                        res_d[galnum][n] = fluxi[n]
+                        res_d[galnum][n].unit = u.Unit('1e-17 erg cm^-2 s^-1')
+
+            scales = ms.diagnostics(nsample, None, self.nps)
+
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                success = metallicity.calculation(
+                    scales, fluxi, self.nm, 'all', 1, self.logf,
+                    disp=self.verbose, dust_corr=self.dust_corr,
+                    verbose=self.verbose)
+            if success==-1:
+                raise ValueError('MINIMUM REQUIRED LINES:  [OII]3727 ' + \
+                    '& [OIII] + 5007, or [NII]6584, and Ha & Hb if ' + \
+                    'you want dereddening')
+
+            for k, v in scales.mds.iteritems():
+                if type(v) == np.ndarray:
+                    if np.isnan(v).sum() != len(v):
+                        res_d[galnum][k] = v
+
+        self.res_d = res_d
+        self.nsample = nsample
+
+    def make_corner(self, galnum, scheme, lines=False):
+        # make DFM-/emcee-style triangle plot
+
+        res = self.res_d[galnum]
+
+        colnames = res.colnames
+
+        if self.nsample == 1:
+            raise ValueError('need a sampled metallicity, not estimated! '+ \
+                'Use self.sample(), with n fairly large')
+
+        other_gcs = ['logR23', 'E(B-V)']
+        if lines == True:
+            other_gcs = ['[OII]3727', 'Hb', '[OIII]4959', '[OIII]5007',
+                         '[OI]6300','Ha','[NII]6584','[SII]6717','[SII]6731',
+                         '[SIII]9069','[SIII]9532'] + other_gcs
+
+        if scheme == 'all':
+            scheme = ['P10', 'M08', 'D02', 'M91', 'KD02', 'M13',
+            'PP04', 'Z94', 'KK04', 'P10']
+            raise RuntimeWarning('Caution using all Z indicators, ' + \
+                'corner plots take a long time to generate')
+
+            scheme_cols = [n for n in colnames if
+                np.array(True if s in n else False for s in scheme).any()]
+
+        elif scheme not in ['P10', 'M08', 'D02', 'M91', 'KD02', 'M13',
+            'PP04', 'Z94', 'KK04', 'P10']:
+            raise ValueError('bad metallicity scheme')
+
+        else:
+            scheme_cols = [n for n in colnames if scheme in n]
+
+        good_cols = scheme_cols + other_gcs
+
+        data = np.array([res[c] for c in good_cols]).T
+        # get rid of pesky nans
+        data = data[~np.isnan(data).any(axis=1)]
+
+        labels = good_cols
+
+        figure = corner.corner(
+            data, labels=labels,
+            quantiles=[0.16, 0.5, 0.84])
+
+        # if we have multiple metallicity indicators, hist them all together
+        if len(scheme_cols) > 1:
+            scheme_colis = np.array(
+                [True if l in scheme_cols else False
+                for l in labels]).astype(bool)
+            Ztot_ax = figure.add_axes([0.575, 0.675, 0.4, 0.3])
+            Ztot_data = np.array([res[c] for c in scheme_cols]).flatten()
+            Ztot_data = Ztot_data[~np.isnan(Ztot_data)]
+            hist(
+                Ztot_data, ax=Ztot_ax, bins='knuth', histtype='step',
+                color='k')
+            plt.xticks(rotation=45.)
+            plt.setp(Ztot_ax.get_yticklabels(), visible=False)
+            Ztot_ax.set_xlabel(r'$Z = 12 + \log{\frac{O}{H}}$')
+            Ztot_ax.tick_params(axis='x', labelsize='x-small')
+
+            pcs = np.percentile(Ztot_data, [14, 50, 86])
+            for p in pcs:
+                Ztot_ax.axvline(p, color='k', linestyle='--')
+
+        figure.savefig('corner_{}_{}.png'.format(self.name, galnum))
+
+    def write_fits(self, hdu):
+        # make a fits header in the same style as the rest of the DAP outputs
+        raise NotImplementedError('write_fits not implemented')
+
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('name', metavar='<name>', type=str, help="the SN file name (root of the _min,_max file names")
     parser.add_argument('nsample', metavar='N', type=int, help="number of iterations, minimum 100 (or 0 for no MC sampling)")
     parser.add_argument('--clobber',default=False, action='store_true', help="replace existing output")
-    parser.add_argument('--binmode', default='k', type=str, choices=['d','s','k','t','bb','kd'], help='''method to determine bin size 
-    {d: Duanes formula, s: n^1/2, t: 2*n**1/3(default), k: Knuth's rule, 
+    parser.add_argument('--binmode', default='k', type=str, choices=['d','s','k','t','bb','kd'], help='''method to determine bin size
+    {d: Duanes formula, s: n^1/2, t: 2*n**1/3(default), k: Knuth's rule,
     bb: Bayesian blocks, kd: Kernel Density}''')
-    parser.add_argument('--path',   default=None, type=str, help='''input/output path (must contain the input _max.txt and 
+    parser.add_argument('--path',   default=None, type=str, help='''input/output path (must contain the input _max.txt and
     _min.txt files  in a subdirectory sn_data)''')
     parser.add_argument('--unpickle',   default=False, action='store_true', help="read the pickled realization instead of making a new one")
 
@@ -607,8 +797,8 @@ def main():
     parser.add_argument('--noplot',default=False, action='store_true', help=" don't plot individual distributions (default is to plot all distributions)")
     parser.add_argument('--asciiout',default=False, action='store_true', help=" write distribution in an ascii output (default is not to)")
     parser.add_argument('--asciidistrib',default=False, action='store_true', help=" write distribution in an ascii output (default is not to)")
-    parser.add_argument('--md',default='all', type =str, help= '''metallicity diagnostic to calculate. 
-    default is 'all', options are: 
+    parser.add_argument('--md',default='all', type =str, help= '''metallicity diagnostic to calculate.
+    default is 'all', options are:
     D02, Z94, M91, C01, P05, M08, M08all, M13, PP04, D13, KD02, DP00 (deprecated), P01''')
     parser.add_argument('--multiproc',default=False, action='store_true', help=" multiprocess, with number of threads max(available cores-1, MAXPROCESSES)")
     args=parser.parse_args()
@@ -628,7 +818,7 @@ def main():
 
     if ASCIIDISTRIB:
         try: import csv
-        except ImportError: 
+        except ImportError:
             raw_input("you must import the csv package to output the distribution. press return to continue")
             ASCIIDISTRIB=False
 
@@ -639,8 +829,8 @@ def main():
     if args.path:
         path=args.path
     else:
-        assert (os.getenv("MCMetdata")),''' the _max, _min (and _med) data must live in a folder named sn_data. 
-        pass a path to the sn_data folder, or set up the environmental variable 
+        assert (os.getenv("MCMetdata")),''' the _max, _min (and _med) data must live in a folder named sn_data.
+        pass a path to the sn_data folder, or set up the environmental variable
         MCMetdata pointing to the path where sn_data lives '''
         path=os.getenv("MCMetdata")
     assert(os.path.isdir(path)),"pass a path or set up the environmental variable MCMetdata pointing to the path where the _min _max _med files live"
@@ -648,13 +838,16 @@ def main():
         print "CALCULATING METALLICITY WITHOUT GENERATING MC DISTRIBUTIONS"
     if args.nsample==1 or args.nsample>=100 :
         fi=input_data(args.name, path=path)
+        for i, n in zip(
+            fi, ['filename', 'meas', 'err', 'nm', 'path', 'bsmeas']):
+            print n, ':', i, '\n-----+++++-----'
         if fi!=-1:
             logf=smart_open(args.log)
             run(fi,args.nsample,args.md,args.multiproc, logf, unpickle=args.unpickle, dust_corr=(not args.nodust), verbose=VERBOSE)
             if args.log: logf.close()
     else:
         print "nsample must be at least 100"
-    
+
 
 if __name__ == "__main__":
     if PROFILING:
@@ -662,5 +855,5 @@ if __name__ == "__main__":
         cProfile.run("main()")
     else:
         main()
-    
+
 

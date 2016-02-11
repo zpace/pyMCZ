@@ -38,9 +38,9 @@ Zs=["E(B-V)", #Halpha, Hbeta
     "P10_ONS","P10_ON",
     "M08_R23","M08_N2Ha","M08_O3Hb","M08_O2Hb","M08_O3O2","M08_O3N2",
     "M13_O3N2","M13_N2",
-    "D13_N2S2_O3S2",    "D13_N2S2_O3Hb",    
-    "D13_N2S2_O3O2",    "D13_N2O2_O3S2",    
-    "D13_N2O2_O3Hb",    "D13_N2O2_O3O2",    
+    "D13_N2S2_O3S2",    "D13_N2S2_O3Hb",
+    "D13_N2S2_O3O2",    "D13_N2O2_O3S2",
+    "D13_N2O2_O3Hb",    "D13_N2O2_O3O2",
     "D13_N2Ha_O3Hb",    "D13_N2Ha_O3O2",
     "KD02_N2O2",   #Halpha, Hbeta,  [OII]3727, [NII]6584
     "KD02_N2S2",
@@ -52,13 +52,14 @@ Zs=["E(B-V)", #Halpha, Hbeta
 
 def get_keys():
     return Zs
- 
+
 def printsafemulti(string,logf, nps):
-    #this is needed because dealing with a log output with multiprocessing 
-    #is painful. but it introduces a bunch of if checks. 
+    #this is needed because dealing with a log output with multiprocessing
+    #is painful. but it introduces a bunch of if checks.
     #if anyone has a better solution please let me know!
     if nps==1:
-        print >>logf,string
+        pass
+        #print >>logf,string
     else:
         print string
 ##############################################################################
@@ -66,7 +67,7 @@ def printsafemulti(string,logf, nps):
 ##############################################################################
 
 #@profile
-def calculation(mscales,measured,num,mds,nps,logf,dust_corr=True,disp=False, verbose=False): 
+def calculation(mscales,measured,num,mds,nps,logf,dust_corr=True,disp=False, verbose=False):
 
     global IGNOREDUST
     mscales.setdustcorrect()
@@ -75,12 +76,12 @@ def calculation(mscales,measured,num,mds,nps,logf,dust_corr=True,disp=False, ver
     raw_lines['Hb']=np.array([float('NaN')])
     raw_lines['Hz']=np.array([float('NaN')])
     for k in measured.iterkeys():
-        #kills all non-finite terms 
-        measured[k][~(np.isfinite(measured[k][:]))]=0.0 
+        #kills all non-finite terms
+        measured[k][~(np.isfinite(measured[k][:]))]=0.0
         raw_lines[k]=measured[k]
 
-    ######we trust QM better than we trust the measurement of the [OIII]4959 
-    ######which is typical low S/N so we set it to [OIII]5007/3. 
+    ######we trust QM better than we trust the measurement of the [OIII]4959
+    ######which is typical low S/N so we set it to [OIII]5007/3.
     ######change this only if youre spectra are very high SNR
     raw_lines['[OIII]4959']=raw_lines['[OIII]5007']/3.
     raw_lines['[OIII]49595007']=raw_lines['[OIII]4959']+raw_lines['[OIII]5007']
@@ -93,11 +94,11 @@ def calculation(mscales,measured,num,mds,nps,logf,dust_corr=True,disp=False, ver
     elif dust_corr and not IGNOREDUST:
 
         if nps>1:
-            print '''WARNING: reddening correction cannot be done 
+            print '''WARNING: reddening correction cannot be done
             without both H_alpha and H_beta measurement!!'''
-    
-        else: 
-            response=raw_input('''WARNING: reddening correction cannot be done without both H_alpha and H_beta measurement!! 
+
+        else:
+            response=raw_input('''WARNING: reddening correction cannot be done without both H_alpha and H_beta measurement!!
             Continuing without reddening correction? [Y/n]\n''').lower()
             assert(not (response.startswith('n'))),"please fix the input file to include Ha and Hb measurements"
 
@@ -122,7 +123,7 @@ def calculation(mscales,measured,num,mds,nps,logf,dust_corr=True,disp=False, ver
     if mscales.checkminimumreq(dust_corr,IGNOREDUST) == -1:
         return -1
 
-        
+
     mscales.calcNIIOII()
     mscales.calcNIISII()
 
@@ -144,25 +145,25 @@ def calculation(mscales,measured,num,mds,nps,logf,dust_corr=True,disp=False, ver
             import pyqz
             mscales.calcpyqz()
         else:
-            printsafemulti('''WARNING: CANNOT CALCULATE pyqz: 
+            printsafemulti('''WARNING: CANNOT CALCULATE pyqz:
             set path to pyqz as environmental variable :
             export PYQZ_DIR="your/path/where/pyqz/resides/ in bash, for example, if you want this scale. ''', logf, nps)
-              
+
 
         mscales.calcZ94()
         mscales.calcM91()
-        
+
         mscales.calcPP04()
-        
+
         #mscales.calcP05()
         mscales.calcP10()
-        
+
         mscales.calcM08()
         mscales.calcM13()
-        
+
         mscales.calcKD02_N2O2()
         mscales.calcKK04_N2Ha()
-        
+
         mscales.calcKK04_R23()
         mscales.calcKDcombined()
 
@@ -170,7 +171,7 @@ def calculation(mscales,measured,num,mds,nps,logf,dust_corr=True,disp=False, ver
         mscales.calcDP00()
     if 'P01' in mds:
         mscales.calcP01()
-         
+
     if 'D02' in mds:
         mscales.calcD02()
     if 'D13' in mds:
@@ -185,8 +186,8 @@ def calculation(mscales,measured,num,mds,nps,logf,dust_corr=True,disp=False, ver
             #using the commented line below instead
             mscales.calcpyqz(plot=disp)
         else:
-            printsafemulti('''WARNING: CANNOT CALCULATE pyqz: 
-            set path to pyqz as environmental variable 
+            printsafemulti('''WARNING: CANNOT CALCULATE pyqz:
+            set path to pyqz as environmental variable
             PYQZ_DIR if you want this scale. ''',logf,nps)
 
     if 'D13all' in mds:
@@ -201,7 +202,7 @@ def calculation(mscales,measured,num,mds,nps,logf,dust_corr=True,disp=False, ver
             #using the commented line below instead
             mscales.calcpyqz(plot=disp, allD13=True)
         else:
-            printsafemulti( '''set path to pyqz as environmental variable 
+            printsafemulti( '''set path to pyqz as environmental variable
 PYQZ_DIR if you want this scale. ''',logf,nps)
 
     if 'PP04' in mds:
@@ -217,14 +218,14 @@ PYQZ_DIR if you want this scale. ''',logf,nps)
     if 'M08all' in mds:
         mscales.calcM08(allM08=True)
     elif 'M08' in mds:
-        mscales.calcM08()
+        mscales.calcM08(allM08=True)
     if 'P05' in mds:
         mscales.calcP05()
     if 'C01' in mds:
         mscales.calcC01_ZR23()
     if 'KD02' in mds :
         mscales.calcKD02_N2O2()
-        mscales.calcKK04_N2Ha()       
+        mscales.calcKK04_N2Ha()
         mscales.calcKK04_R23()
         mscales.calcKDcombined()
 
