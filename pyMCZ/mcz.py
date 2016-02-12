@@ -28,7 +28,10 @@ PROFILING = False
 
 from astropy import table as t, constants as c, units as u, wcs
 from astropy.visualization import hist
+from astropy.io import fits
 import corner
+from misc_tools import blockPrint, enablePrint
+from progressbar import ProgressBar, Percentage, Bar, ETA
 
 
 alllines=['[OII]3727','Hb','[OIII]4959','[OIII]5007','[OI]6300','Ha','[NII]6584','[SII]6717','[SII]6731','[SIII]9069','[SIII]9532']
@@ -646,14 +649,17 @@ class MCZ(object):
 
         return self.sample(1, True)
 
-    def sample(self, nsample=1000, from_estimate=False):
+    def sample(self, nsample=1000, from_estimate=False, test=False):
 
         if (nsample == 1) and (from_estimate == False):
             raise ValueError(
                 'for nsample = 1, use .estimate() method!')
-        elif 1 < nsample < 100:
+        elif (1 < nsample < 100) and (test == False):
             raise ValueError(
                 'need at least 100 samples!')
+        elif (1 < nsample < 100) and (test == True):
+            print 'not enough samples, remember to only ' + \
+                'use this as a test-bed!'
 
         # increasing sample by 10% to ensure
         # robustness against rejected samples
@@ -667,7 +673,11 @@ class MCZ(object):
         self.tfcnames = tfcnames
 
         #looping over nm measurements
-        for i in range(self.NM0, 3):#self.nm):
+        pbar = ProgressBar(
+            widgets=[Percentage(), Bar(), ETA()], maxval=self.nm).start()
+
+        for i in range(self.NM0, self.nm):
+            blockPrint()
             galnum = self.flux['galnum'][i]
             fr = self.flux[i]
             er = self.err[i]
@@ -703,8 +713,14 @@ class MCZ(object):
                     if np.isnan(v).sum() != len(v):
                         res_d[galnum][k] = v
 
+            enablePrint()
+            pbar.update(i)
+
+        pbar.finish()
+
         self.res_d = res_d
         self.nsample = nsample
+        self.Zdiags = res_d[galnum].colnames
 
     def make_corner(self, galnum, scheme, lines=False):
         # make DFM-/emcee-style triangle plot
@@ -773,11 +789,61 @@ class MCZ(object):
 
         figure.savefig('corner_{}_{}.png'.format(self.name, galnum))
 
-    def write_fits(self, hdu):
+    def write_fits(self, src_hdulist, objname, path=''):
+        # make and write a fits file with 16th, 50th, and 84th
+        # percentile metallicity data for each of the metallicity
+        # diagnostics present in res_d
+
+        Zdiags = [i for i in self.Zdiags if i not in self.tfcnames]
+
         # make a fits header in the same style as the rest of the DAP outputs
-        raise NotImplementedError('write_fits not implemented')
+        wcs_h = wcs.WCS(src_hdulist[1].header)
+        header = wcs_h.to_header()
 
+        # include the native MaNGA header that's also in the DAP
+        hdulist = [src_hdulist[0],]
 
+        # create 1 hdu for each of the metallicity types
+        hdulist = fits.HDUList(hdulist)
+
+        binids = src_hdulist['BINID'].data
+        coords = {k: np.nonzero(binids == k)
+            for k in self.res_d.keys()}
+        spax_shape = src_hdulist[1].data.shape[1:]
+
+        for i, k in enumerate(Zdiags):
+            new_hdu = fits.ImageHDU(header=header)
+
+            new_hdu.header['EXTNAME'] = k
+            new_hdu.header['NSAMPLE'] = self.nsample
+            new_hdu.header['C01'] = '16th pct'
+            new_hdu.header['C02'] = '50th pct'
+            new_hdu.header['C03'] = '84th pct'
+            new_hdu.header['C04'] = 'MASK'
+            data16 = np.nan * np.ones(spax_shape)
+            data50 = np.ones(spax_shape)
+            data84 = np.ones(spax_shape)
+            for ck, cv in coords.iteritems():
+                spax_Z = self.res_d[ck]
+                try:
+                    p = np.percentile(spax_Z[k], [16, 50, 84])
+                except KeyError:
+                    # if one Z diagnostic doesn't exist
+                    # for a particular spaxel
+                    p = np.nan * np.ones(3)
+
+                data16[cv[0], cv[1]] = p[0]
+                data50[cv[0], cv[1]] = p[1]
+                data84[cv[0], cv[1]] = p[2]
+                data = np.stack([data16, data50, data84])
+                mask = np.isnan(data).any(axis=0)
+                data = np.stack([data16, data50, data84, mask])
+            new_hdu.data = data
+            hdulist.append(new_hdu)
+
+        print hdulist
+
+        hdulist.writeto('{}{}_Zs.fits'.format(path, objname))
 
 def main():
     parser = argparse.ArgumentParser()
